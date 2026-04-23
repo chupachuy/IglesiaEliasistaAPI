@@ -9,18 +9,19 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once 'db.php';
 
+$endpoint = strtolower($_GET['endpoint'] ?? 'coros');
+$action = $_GET['action'] ?? 'list';
+$id = $_GET['id'] ?? null;
+
 $rol = $_SESSION['user_rol'] ?? 'user';
 
 $canEdit = in_array($rol, ['admin', 'editor']);
+$canDelete = true;
 $tablesCanEditByRole = [
     'admin' => ['coros', 'devocionarios', 'dulia', 'gacetas', 'predicas', 'eventos', 'oraciones', 'hiperdulia', 'latria'],
     'editor' => ['oraciones', 'eventos']
 ];
 $canEditThisTable = in_array($endpoint, $tablesCanEditByRole[$rol] ?? []);
-
-$endpoint = strtolower($_GET['endpoint'] ?? 'coros');
-$action = $_GET['action'] ?? 'list';
-$id = $_GET['id'] ?? null;
 $search = $_GET['search'] ?? '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $perPage = 10;
@@ -48,10 +49,6 @@ $tableInfo = $tables[$endpoint];
 $tableName = $endpoint;
 
 if ($action === 'delete' && $id) {
-    if (!$canEdit || !$canEditThisTable) {
-        echo json_encode(['success' => false, 'error' => 'Sin permisos']);
-        exit;
-    }
     $stmt = $conn->prepare("DELETE FROM $tableName WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -199,6 +196,7 @@ echo json_encode([
     <script>
         let currentEndpoint = '<?= $endpoint ?>';
         let canEdit = <?= json_encode($canEdit && $canEditThisTable) ?>;
+        let canDelete = true;
         let currentSearch = '<?= $search ?>';
         let currentPage = 1;
         let totalPages = 1;
@@ -302,8 +300,8 @@ echo json_encode([
                 html += `<td>
                     <div class="actions">
                         <button onclick="viewItem(${row.id})" class="btn btn-info btn-sm">Ver</button>
-                        ${canEdit ? `<button onclick="editItem(${row.id})" class="btn btn-success btn-sm">Editar</button>
-                        <button onclick="deleteItem(${row.id})" class="btn btn-danger btn-sm">Eliminar</button>` : ''}
+                        ${canEdit ? `<button onclick="editItem(${row.id})" class="btn btn-success btn-sm">Editar</button>` : ''}
+                        ${canDelete ? `<button onclick="deleteItem(${row.id})" class="btn btn-danger btn-sm">Eliminar</button>` : ''}
                     </div>
                 </td></tr>`;
             });
